@@ -1,0 +1,111 @@
+from datetime import datetime, timedelta
+
+class Projeto:
+    def __init__(self, nome):
+        self.nome = nome
+        self.tarefas = []
+    
+    def __iter__(self):
+      return self.tarefas.__iter__()
+    
+    # **kwargs > recebe parâmetros variados  
+    def _add_tarefa(self, tarefa, **kwargs):
+        self.tarefas.append(tarefa)
+        
+    def _add_nova_tarefa(self, descricao,**kwargs):
+        self.tarefas.append(Tarefa(descricao, kwargs.get('vencimento', None)))
+        
+    def add(self, tarefa, vencimento=None, **kwargs):
+        # verificando se um determinado parâmetro ou determinada variável de um tipo de uma classe 
+        funcao_escolhida = self._add_tarefa if isinstance(tarefa, Tarefa) \
+            else self._add_nova_tarefa
+        kwargs['vencimento'] = vencimento
+        funcao_escolhida(tarefa, **kwargs)    
+         
+    def pendentes(self):
+        tarefa_pendentes = [tarefa for tarefa in self.tarefas if not tarefa.feito]
+        return tarefa_pendentes
+
+    def procurar(self, descricao):
+        return [tarefa for tarefa in self.tarefas 
+               if tarefa.descricao == descricao][0]
+         
+    def __str__(self):
+        return f'{self.nome}\n({len(self.pendentes())} tarefa(s) pendente(s))'
+             
+
+class Tarefa:
+    def __init__(self, descricao, vencimento=None):
+        self.descricao = descricao
+        self.feito = False
+        self.criacao = datetime.now()
+        self.vencimento = vencimento
+        
+    def concluir(self):
+        self.feito = True
+        
+    def __str__(self):
+        status = []
+        if self.feito:
+            status.append('>>> Concluída <<<')
+        elif self.vencimento:
+            if datetime.now() > self.vencimento:
+                status.append('>>> Vencida <<<')
+            else:
+                dias = (self.vencimento - datetime.now()).days
+                status.append(f'Vence em {dias} dias')
+        return f'{self.descricao} >>> ' + ' ' .join(status)
+    
+    
+def imprimir_tarefas(projeto, vencimento=None):
+   for tarefa in projeto:
+        if vencimento is None or (tarefa.vencimento and tarefa.vencimento == vencimento):
+            print(tarefa)
+   return tarefa  
+
+
+class TarefaRecorrente(Tarefa):
+    def __init__(self, descricao, vencimento, dias=7):
+        super().__init__(descricao, vencimento)
+        self.dias = dias
+        
+    def concluir(self):
+        super().concluir()
+        novo_vencimento = datetime.now() + timedelta(days=self.dias)
+        return TarefaRecorrente(self.descricao, novo_vencimento, self.dias)
+
+
+
+
+def main():
+    casa = Projeto('Tarefas de Casa')
+    casa.add('Lavar prato', datetime.now() + timedelta(days=2, minutes=12))
+    casa.add('Lavar roupa')
+    casa.add('Arrumar quarto', datetime.now())
+    casa.add('Dobrar as roupas')
+    casa.add(TarefaRecorrente('Lavar banheiro', datetime.now(), 7))
+    casa.add(casa.procurar('Lavar banheiro').concluir())
+    print(casa)
+    
+    casa.procurar('Lavar roupa').concluir()
+    imprimir_tarefas(casa)
+    
+    print(casa)
+    
+    print('===============================')
+     
+    
+    mercado = Projeto('Compras no mercado')
+    mercado.add('Frutas')
+    mercado.add('Carnes', datetime.now() + timedelta(days=5, minutes=12))
+    print(mercado)
+    
+    mercado.procurar('Frutas').concluir()
+    imprimir_tarefas(mercado)
+    
+    print(mercado) 
+    
+               
+if __name__ == "__main__":
+    main()  
+             
